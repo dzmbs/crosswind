@@ -1,0 +1,39 @@
+syntax = "proto3";
+package crosswind;
+
+message Airport {
+  string code = 2;
+}
+
+message Segment {
+  string date = 2;
+  optional int32 max_stops = 5;
+  Airport origin = 13;
+  Airport destination = 14;
+}
+
+enum Cabin {
+  CABIN_UNSPECIFIED = 0;
+  ECONOMY = 1;
+  PREMIUM_ECONOMY = 2;
+  BUSINESS = 3;
+  FIRST = 4;
+}
+
+enum TripType {
+  TRIP_UNSPECIFIED = 0;
+  ROUND_TRIP = 1;
+  ONE_WAY = 2;
+}
+
+enum PassengerType {
+  PASSENGER_UNSPECIFIED = 0;
+  ADULT = 1;
+}
+
+message SearchRequest {
+  repeated Segment segments = 3;
+  repeated PassengerType passengers = 8;
+  Cabin cabin = 9;
+  TripType trip = 19;
+}

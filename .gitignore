@@ -1,0 +1,9 @@
+/target
+/dist
+/site/node_modules
+/site/dist
+/.venv
+/investigation
+/reference
+*.pyc
+.DS_Store
