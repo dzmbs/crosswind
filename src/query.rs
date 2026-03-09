@@ -9,7 +9,6 @@ use proto::{Airport, Cabin, PassengerType, SearchRequest, Segment, TripType};
 
 pub struct QueryParams {
     pub origin: String,
-    pub destinations: Vec<String>,
     pub depart_date: String,
     pub return_date: Option<String>,
     pub cabin: Cabin,
@@ -77,7 +76,6 @@ mod tests {
     fn one_way_encodes() {
         let params = QueryParams {
             origin: "BEG".into(),
-            destinations: vec!["JFK".into()],
             depart_date: "2026-04-01".into(),
             return_date: None,
             cabin: Cabin::Economy,
@@ -108,7 +106,6 @@ mod tests {
     fn round_trip_encodes() {
         let params = QueryParams {
             origin: "BEG".into(),
-            destinations: vec!["JFK".into()],
             depart_date: "2026-04-01".into(),
             return_date: Some("2026-04-16".into()),
             cabin: Cabin::Business,
@@ -136,7 +133,6 @@ mod tests {
     fn nonstop_filter() {
         let params = QueryParams {
             origin: "LAX".into(),
-            destinations: vec!["JFK".into()],
             depart_date: "2026-04-01".into(),
             return_date: None,
             cabin: Cabin::Economy,

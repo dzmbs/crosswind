@@ -181,7 +181,6 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
 
     let params = QueryParams {
         origin,
-        destinations: destinations.clone(),
         depart_date,
         return_date,
         cabin,
@@ -204,14 +203,13 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
     let mut all_flights = Vec::new();
     let mut all_airlines = Vec::new();
 
-    let multi = destinations.len() > 1;
     for dest in &destinations {
         match crosswind::search(&params, dest, cli.timeout).await {
             Ok(result) => {
                 all_flights.extend(result.flights);
                 all_airlines.extend(result.airlines);
             }
-            Err(CrosswindError::NoResults) if multi => {
+            Err(CrosswindError::NoResults) if destinations.len() > 1 => {
                 eprintln!("{DIM}no flights for {dest}, skipping{RESET}");
             }
             Err(e) => return Err(e),

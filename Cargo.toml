@@ -1,42 +1,23 @@
 [package]
 name = "crosswind"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 license = "MIT"
 description = "Google Flights CLI. Search flights from the terminal."
 rust-version = "1.88"
 
 [dependencies]
-# HTTP + TLS impersonation
 wreq = { version = "6.0.0-rc.28", features = ["cookies"] }
 wreq-util = "3.0.0-rc.6"
-
-# Protobuf
 prost = "0.13"
-
-# HTML parsing
 scraper = "0.22"
-
-# Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-# CLI
 clap = { version = "4.5", features = ["derive"] }
-
-# Encoding
 base64 = "0.22"
-
-# Date handling
 chrono = "0.4"
-
-# Async
 tokio = { version = "1", features = ["full"] }
-
-# Errors
 thiserror = "2"
-
-# Browser open
 open = "5"
 
 [build-dependencies]

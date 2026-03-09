@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="0.2.1"
+VERSION="0.2.2"
 REPO="dzmbs/crosswind"
 INSTALL_DIR="${CROSSWIND_INSTALL_DIR:-$HOME/.local/bin}"
 
