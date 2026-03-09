@@ -1,10 +1,18 @@
-# Crosswind
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/public/crosswind-wordmark-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="site/public/crosswind-wordmark-light.svg">
+    <img src="site/public/crosswind-wordmark-light.svg" alt="crosswind" height="52" />
+  </picture>
+</p>
 
-Google Flights from your terminal. Built for humans and AI agents.
+<p align="center">Google Flights from your terminal. Built for humans and AI agents.</p>
 
-[![version](https://img.shields.io/badge/version-v0.1.0-38BDF8)](https://github.com/dzmbs/crosswind/releases)
-[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-lightgrey)]()
+<p align="center">
+  <a href="https://github.com/dzmbs/crosswind/releases"><img src="https://img.shields.io/badge/version-v0.1.0-0EA5E9" alt="version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="license" /></a>
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-lightgrey" alt="platforms" />
+</p>
 
 ## What is this
 
