@@ -76,12 +76,11 @@ pub fn parse_date(input: &str) -> Result<String, CrosswindError> {
     }
 
     Err(CrosswindError::InvalidDate(format!(
-        "cannot parse date '{input}' — try apr1, 4/1, +7, or 2026-04-01"
+        "cannot parse date '{input}', try apr1, 4/1, +7, or 2026-04-01"
     )))
 }
 
 fn parse_month_day(s: &str) -> Option<(u32, u32)> {
-    // Try 3-letter month prefix
     if s.len() < 4 {
         return None;
     }
@@ -119,13 +118,11 @@ fn resolve_future_date(
     day: u32,
 ) -> Result<NaiveDate, CrosswindError> {
     let year = today.year();
-    // Try this year first
     if let Some(d) = NaiveDate::from_ymd_opt(year, month, day) {
         if d >= today {
             return Ok(d);
         }
     }
-    // Fall back to next year
     NaiveDate::from_ymd_opt(year + 1, month, day).ok_or_else(|| {
         CrosswindError::InvalidDate(format!("invalid date: month={month}, day={day}"))
     })

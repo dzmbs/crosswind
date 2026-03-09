@@ -55,9 +55,7 @@ fn encode_tfs(params: &QueryParams, destination: &str) -> String {
         TripType::OneWay
     };
 
-    let passengers: Vec<i32> = (0..params.adults)
-        .map(|_| PassengerType::Adult as i32)
-        .collect();
+    let passengers = vec![PassengerType::Adult as i32; params.adults as usize];
 
     let request = SearchRequest {
         segments,

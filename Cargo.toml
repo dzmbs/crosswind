@@ -8,7 +8,7 @@ rust-version = "1.88"
 
 [dependencies]
 # HTTP + TLS impersonation
-wreq = { version = "6.0.0-rc.28", features = ["cookies", "socks"] }
+wreq = { version = "6.0.0-rc.28", features = ["cookies"] }
 wreq-util = "3.0.0-rc.6"
 
 # Protobuf

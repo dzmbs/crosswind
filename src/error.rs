@@ -3,7 +3,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CrosswindError {
-    // Validation (exit code 2)
     #[error("airport code must be exactly 3 letters, got '{0}'")]
     InvalidAirportCode(String),
 
@@ -13,7 +12,6 @@ pub enum CrosswindError {
     #[error("{0}")]
     InvalidPassengers(String),
 
-    // Network (exit code 3)
     #[error("request timed out")]
     Timeout,
 
@@ -26,17 +24,12 @@ pub enum CrosswindError {
     #[error("TLS handshake failed: {0}")]
     TlsError(String),
 
-    #[error("proxy error: {0}")]
-    ProxyError(String),
-
-    // Rate limit / blocked (exit code 4)
     #[error("rate limited by Google")]
     RateLimited,
 
     #[error("blocked by Google (HTTP {0})")]
     Blocked(u16),
 
-    // Parse (exit code 5)
     #[error("could not find flight data in page")]
     ScriptTagNotFound,
 
@@ -46,7 +39,6 @@ pub enum CrosswindError {
     #[error("no flights found for this search")]
     NoResults,
 
-    // General (exit code 1)
     #[error("unexpected HTTP status {0}")]
     HttpStatus(u16),
 
@@ -61,8 +53,7 @@ impl CrosswindError {
             Self::Timeout
             | Self::ConnectionFailed(_)
             | Self::DnsResolution(_)
-            | Self::TlsError(_)
-            | Self::ProxyError(_) => 3,
+            | Self::TlsError(_) => 3,
             Self::RateLimited | Self::Blocked(_) => 4,
             Self::ScriptTagNotFound | Self::ParseError(_) | Self::NoResults => 5,
             Self::HttpStatus(_) | Self::Other(_) => 1,
@@ -78,7 +69,6 @@ impl CrosswindError {
             Self::ConnectionFailed(_) => "connection_failed",
             Self::DnsResolution(_) => "dns_resolution",
             Self::TlsError(_) => "tls_error",
-            Self::ProxyError(_) => "proxy_error",
             Self::RateLimited => "rate_limited",
             Self::Blocked(_) => "blocked",
             Self::ScriptTagNotFound => "script_tag_not_found",
@@ -110,7 +100,6 @@ impl CrosswindError {
                 | Self::ConnectionFailed(_)
                 | Self::DnsResolution(_)
                 | Self::TlsError(_)
-                | Self::ProxyError(_)
                 | Self::RateLimited
                 | Self::Blocked(_)
         )

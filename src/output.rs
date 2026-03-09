@@ -4,46 +4,41 @@ use serde_json::{Value, json};
 
 use crate::model::SearchResult;
 
-/// Output format, matching heat-cli/hlz conventions.
 #[derive(Clone, Copy, PartialEq)]
 pub enum OutputFormat {
-    /// Styled table for humans (TTY)
     Pretty,
-    /// JSON envelope (piped or --json)
     Json,
-    /// Newline-delimited JSON, one flight per line
     Ndjson,
-    /// Minimal output (just count or first price)
     Quiet,
 }
 
 impl OutputFormat {
-    /// Auto-detect format from flags and TTY state.
-    /// Priority: explicit flags > TTY detection.
-    pub fn detect(json: bool, output: Option<&str>, quiet: bool) -> Self {
+    pub fn detect(json: bool, output: Option<&str>, quiet: bool) -> Result<Self, String> {
         if quiet {
-            return Self::Quiet;
+            return Ok(Self::Quiet);
         }
         if let Some(fmt) = output {
             return match fmt {
-                "json" => Self::Json,
-                "ndjson" | "jsonl" => Self::Ndjson,
-                "pretty" => Self::Pretty,
-                "quiet" => Self::Quiet,
-                _ => Self::Json,
+                "json" => Ok(Self::Json),
+                "ndjson" | "jsonl" => Ok(Self::Ndjson),
+                "pretty" => Ok(Self::Pretty),
+                "quiet" => Ok(Self::Quiet),
+                _ => Err(format!(
+                    "unknown output format '{fmt}', use pretty, json, ndjson, or quiet"
+                )),
             };
         }
         if json {
-            return Self::Json;
+            return Ok(Self::Json);
         }
         if io::stdout().is_terminal() {
-            Self::Pretty
+            Ok(Self::Pretty)
         } else {
-            Self::Json
+            Ok(Self::Json)
         }
     }
 
-    pub fn is_json(&self) -> bool {
+    pub fn is_machine(&self) -> bool {
         matches!(self, Self::Json | Self::Ndjson)
     }
 }
@@ -51,6 +46,10 @@ impl OutputFormat {
 pub fn is_tty() -> bool {
     io::stdout().is_terminal()
 }
+
+pub const DIM: &str = "\x1b[2m";
+pub const RESET: &str = "\x1b[0m";
+const GREEN: &str = "\x1b[32m";
 
 pub fn format_duration(minutes: i32) -> String {
     let h = minutes / 60;
@@ -83,10 +82,6 @@ fn currency_symbol(currency: &str) -> &str {
     }
 }
 
-const GREEN: &str = "\x1b[32m";
-const RESET: &str = "\x1b[0m";
-const DIM: &str = "\x1b[2m";
-
 pub fn print_table(result: &SearchResult, currency: &str) {
     let sym = currency_symbol(currency);
 
@@ -95,26 +90,39 @@ pub fn print_table(result: &SearchResult, currency: &str) {
         return;
     }
 
-    // header to stderr (diagnostics)
     eprintln!(
         "{DIM}  #  Price    Airlines                  Route       Depart       Arrive       Dur       Stops{RESET}"
     );
     eprintln!(
-        "{DIM}  ─  ───────  ────────────────────────  ──────────  ───────────  ───────────  ────────  ───────{RESET}"
+        "{DIM}  -  -------  ------------------------  ----------  -----------  -----------  --------  -------{RESET}"
     );
 
     for (i, flight) in result.flights.iter().enumerate() {
         let first_seg = &flight.segments[0];
         let last_seg = flight.segments.last().unwrap();
 
-        let route = format!("{}→{}", first_seg.from_code, last_seg.to_code);
+        let route = format!("{}>{}", first_seg.from_code, last_seg.to_code);
         let airlines_str = flight.airlines.join(", ");
-        let depart = format!("{} {}", &first_seg.depart_date[5..], first_seg.depart_time);
-        let arrive = format!("{} {}", &last_seg.arrive_date[5..], last_seg.arrive_time);
+        let depart = format!(
+            "{} {}",
+            first_seg
+                .depart_date
+                .get(5..)
+                .unwrap_or(&first_seg.depart_date),
+            first_seg.depart_time
+        );
+        let arrive = format!(
+            "{} {}",
+            last_seg
+                .arrive_date
+                .get(5..)
+                .unwrap_or(&last_seg.arrive_date),
+            last_seg.arrive_time
+        );
         let price_str = if flight.price > 0 {
             format!("{sym}{}", flight.price)
         } else {
-            "—".into()
+            "-".into()
         };
         let dur = format_duration(flight.duration_minutes);
         let stops = stops_label(flight.stops);
@@ -140,10 +148,11 @@ pub fn print_table(result: &SearchResult, currency: &str) {
 }
 
 fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max {
+    if s.chars().count() <= max {
         s.to_string()
     } else {
-        format!("{}…", &s[..max - 1])
+        let truncated: String = s.chars().take(max - 1).collect();
+        format!("{truncated}…")
     }
 }
 
@@ -176,8 +185,14 @@ pub fn print_quiet(result: &SearchResult, currency: &str) {
         return;
     }
     let sym = currency_symbol(currency);
-    let cheapest = &result.flights[0];
-    println!("{sym}{}", cheapest.price);
+    let min_price = result
+        .flights
+        .iter()
+        .filter(|f| f.price > 0)
+        .map(|f| f.price)
+        .min()
+        .unwrap_or(0);
+    println!("{sym}{min_price}");
 }
 
 pub fn print_error_json(err: &crate::error::CrosswindError, cmd: &str, timing_ms: u64) {

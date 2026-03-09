@@ -7,17 +7,6 @@ use wreq_util::Emulation;
 
 use crate::error::CrosswindError;
 
-const BASE_URL: &str = "https://www.google.com/travel/flights";
-
-fn cache_buster() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
-        .to_string()
-}
-
 pub async fn fetch_html(url: &str, timeout_secs: u64) -> Result<String, CrosswindError> {
     let jar = Arc::new(Jar::default());
     let google_uri: wreq::Uri = "https://www.google.com".parse().unwrap();
@@ -49,23 +38,6 @@ pub async fn fetch_html(url: &str, timeout_secs: u64) -> Result<String, Crosswin
         .text()
         .await
         .map_err(|e| CrosswindError::ConnectionFailed(e.to_string()))
-}
-
-pub async fn fetch_flights(
-    tfs: &str,
-    currency: &str,
-    lang: &str,
-    timeout_secs: u64,
-) -> Result<String, CrosswindError> {
-    let url = format!(
-        "{}?tfs={}&hl={}&curr={}&tfu=EgQIABABIgA&cx={}",
-        BASE_URL,
-        tfs,
-        lang,
-        currency,
-        cache_buster(),
-    );
-    fetch_html(&url, timeout_secs).await
 }
 
 fn map_request_error(e: wreq::Error) -> CrosswindError {

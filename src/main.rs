@@ -6,7 +6,7 @@ use clap::Parser;
 use crosswind::date::parse_date;
 use crosswind::error::CrosswindError;
 use crosswind::model::{Flight, SearchResult};
-use crosswind::output::{self, OutputFormat};
+use crosswind::output::{self, DIM, OutputFormat, RESET};
 use crosswind::query::QueryParams;
 use crosswind::query::proto::Cabin;
 
@@ -110,44 +110,38 @@ fn sort_flights(flights: &mut [Flight], sort: &str) {
         "duration" => flights.sort_by_key(|f| f.duration_minutes),
         "stops" => flights.sort_by_key(|f| (f.stops, f.price.max(0))),
         "departure" => flights.sort_by(|a, b| {
-            let a_key = a.segments.first().map(|s| (&s.depart_date, &s.depart_time));
-            let b_key = b.segments.first().map(|s| (&s.depart_date, &s.depart_time));
-            a_key.cmp(&b_key)
+            let key = |f: &Flight| {
+                f.segments
+                    .first()
+                    .map(|s| (s.depart_date.clone(), s.depart_time.clone()))
+            };
+            key(a).cmp(&key(b))
         }),
-        _ => {
-            // default: price ascending, unknown prices last
-            flights.sort_by(|a, b| {
-                let pa = if a.price == 0 { i64::MAX } else { a.price };
-                let pb = if b.price == 0 { i64::MAX } else { b.price };
-                pa.cmp(&pb)
-            });
-        }
+        // default: price ascending, unknown prices last
+        _ => flights.sort_by(|a, b| {
+            let pa = if a.price == 0 { i64::MAX } else { a.price };
+            let pb = if b.price == 0 { i64::MAX } else { b.price };
+            pa.cmp(&pb)
+        }),
     }
-}
-
-fn filter_flights(flights: Vec<Flight>, cli: &Cli) -> Vec<Flight> {
-    flights
-        .into_iter()
-        .filter(|f| {
-            if let Some(max) = cli.max_duration {
-                if f.duration_minutes > max {
-                    return false;
-                }
-            }
-            true
-        })
-        .collect()
 }
 
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
     let start = Instant::now();
-    let format = OutputFormat::detect(cli.json, cli.output.as_deref(), cli.quiet);
+
+    let format = match OutputFormat::detect(cli.json, cli.output.as_deref(), cli.quiet) {
+        Ok(f) => f,
+        Err(msg) => {
+            eprintln!("error: {msg}");
+            process::exit(2);
+        }
+    };
 
     if let Err(e) = run(&cli, format, start).await {
         let timing_ms = start.elapsed().as_millis() as u64;
-        if format.is_json() {
+        if format.is_machine() {
             output::print_error_json(&e, "search", timing_ms);
         } else {
             output::print_error_text(&e);
@@ -158,7 +152,6 @@ async fn main() {
 
 async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), CrosswindError> {
     let origin = validate_airport_code(&cli.origin)?;
-
     let destinations: Vec<String> = cli
         .destinations
         .split(',')
@@ -171,7 +164,6 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
 
     let depart_date = parse_date(&cli.date)?;
     let return_date = cli.ret.as_deref().map(parse_date).transpose()?;
-
     let cabin = parse_cabin(&cli.cabin)?;
 
     if cli.adults == 0 || cli.adults > 9 {
@@ -181,7 +173,6 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
         )));
     }
 
-    // --nonstop is sugar for --max-stops 0
     let max_stops = if cli.nonstop { Some(0) } else { cli.max_stops };
 
     let params = QueryParams {
@@ -196,7 +187,6 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
         lang: cli.lang.clone(),
     };
 
-    // --open: just open the URL in browser
     if cli.open {
         let url = crosswind::query::build_url(&params, &destinations[0]);
         open::that(&url)
@@ -207,7 +197,6 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
         return Ok(());
     }
 
-    // Search each destination
     let mut all_flights = Vec::new();
     let mut all_airlines = Vec::new();
 
@@ -217,17 +206,15 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
         all_airlines.extend(result.airlines);
     }
 
-    // Deduplicate airlines by code
     all_airlines.sort_by(|a, b| a.code.cmp(&b.code));
     all_airlines.dedup_by(|a, b| a.code == b.code);
 
-    // Client-side filters
-    let mut all_flights = filter_flights(all_flights, cli);
+    if let Some(max) = cli.max_duration {
+        all_flights.retain(|f| f.duration_minutes <= max);
+    }
 
-    // Sort
     sort_flights(&mut all_flights, &cli.sort);
 
-    // Top N
     if let Some(top) = cli.top {
         all_flights.truncate(top);
     }
@@ -255,6 +242,3 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
 
     Ok(())
 }
-
-const DIM: &str = "\x1b[2m";
-const RESET: &str = "\x1b[0m";

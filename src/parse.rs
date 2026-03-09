@@ -75,14 +75,12 @@ fn parse_flight(item: &Value, is_best: bool) -> Option<Flight> {
         .filter_map(|v| v.as_str().map(String::from))
         .collect::<Vec<_>>();
 
-    let segments_arr = fd.get(2)?.as_array()?;
-    let mut segments = Vec::new();
-
-    for seg in segments_arr {
-        if let Some(s) = parse_segment(seg) {
-            segments.push(s);
-        }
-    }
+    let segments: Vec<_> = fd
+        .get(2)?
+        .as_array()?
+        .iter()
+        .filter_map(parse_segment)
+        .collect();
 
     if segments.is_empty() {
         return None;
