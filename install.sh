@@ -35,7 +35,22 @@ detect_target() {
   echo "${os}-${arch}"
 }
 
-try_prebuilt() {
+check_existing() {
+  local existing
+  if existing="$(command -v crosswind 2>/dev/null)"; then
+    local current
+    current="$("$existing" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")"
+    if [ "$current" = "$VERSION" ]; then
+      say "Crosswind v${VERSION} is already installed at ${existing}"
+      say "Nothing to do."
+      exit 0
+    elif [ -n "$current" ]; then
+      say "Upgrading Crosswind v${current} to v${VERSION}"
+    fi
+  fi
+}
+
+download() {
   local target="$1"
   local artifact="crosswind-v${VERSION}-${target}.tar.gz"
   local url="https://github.com/${REPO}/releases/download/v${VERSION}/${artifact}"
@@ -47,7 +62,11 @@ try_prebuilt() {
   trap "rm -rf '$tmpdir'" EXIT
 
   if ! curl -fsSL "$url" -o "${tmpdir}/${artifact}"; then
-    return 1
+    err "Download failed. No prebuilt binary for ${target}.
+
+To install from source:
+  1. Install Rust: https://rustup.rs
+  2. Run: cargo install --git https://github.com/${REPO} --bin crosswind"
   fi
 
   say "Extracting..."
@@ -64,39 +83,6 @@ try_prebuilt() {
   fi
 
   chmod +x "${INSTALL_DIR}/crosswind"
-  return 0
-}
-
-try_cargo_install() {
-  if command -v cargo >/dev/null 2>&1; then
-    say "Installing via cargo..."
-    cargo install --git "https://github.com/${REPO}" --bin crosswind
-    return 0
-  fi
-  return 1
-}
-
-try_rustup_then_cargo() {
-  if command -v rustup >/dev/null 2>&1; then
-    say "Rust toolchain manager found but cargo is missing."
-    say "Running: rustup install stable"
-    rustup install stable
-    if command -v cargo >/dev/null 2>&1; then
-      try_cargo_install
-      return 0
-    fi
-  fi
-  return 1
-}
-
-print_no_install_options() {
-  err "Could not install Crosswind.
-
-No prebuilt binary is available for your platform, and neither cargo nor rustup were found.
-
-To install manually:
-  1. Install Rust: https://rustup.rs
-  2. Run: cargo install --git https://github.com/${REPO} --bin crosswind"
 }
 
 check_path() {
@@ -105,7 +91,7 @@ check_path() {
   esac
 
   say ""
-  say "Add Crosswind to your PATH by adding this to your shell profile:"
+  say "Add crosswind to your PATH:"
   say ""
   say "  export PATH=\"${INSTALL_DIR}:\$PATH\""
   say ""
@@ -115,39 +101,20 @@ main() {
   say "Crosswind installer"
   say ""
 
+  check_existing
+
   local target
   target="$(detect_target)"
+  download "$target"
 
-  if try_prebuilt "$target"; then
-    say "Installed Crosswind to ${INSTALL_DIR}/crosswind"
-  elif try_cargo_install; then
-    say "Installed Crosswind via cargo"
-  elif try_rustup_then_cargo; then
-    say "Installed Crosswind via cargo (after rustup)"
-  else
-    print_no_install_options
-  fi
+  say "Installed crosswind to ${INSTALL_DIR}/crosswind"
 
-  # Verify
-  local cw_bin
-  if [ -x "${INSTALL_DIR}/crosswind" ]; then
-    cw_bin="${INSTALL_DIR}/crosswind"
-  elif command -v crosswind >/dev/null 2>&1; then
-    cw_bin="$(command -v crosswind)"
-  else
-    check_path
-    say "Installation complete. Restart your shell or update PATH, then run: crosswind --version"
-    exit 0
-  fi
-
-  say ""
-  if "$cw_bin" --version 2>/dev/null; then
+  if "${INSTALL_DIR}/crosswind" --version 2>/dev/null; then
     true
   fi
 
   check_path
-  say ""
-  say "Installation complete. Run 'crosswind --help' to get started."
+  say "Run 'crosswind --help' to get started."
 }
 
 main

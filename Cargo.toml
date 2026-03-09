@@ -3,7 +3,7 @@ name = "crosswind"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-description = "Google Flights CLI — search flights from the terminal"
+description = "Google Flights CLI. Search flights from the terminal."
 rust-version = "1.88"
 
 [dependencies]
@@ -29,9 +29,6 @@ base64 = "0.22"
 
 # Date handling
 chrono = "0.4"
-
-# Output
-comfy-table = "7"
 
 # Async
 tokio = { version = "1", features = ["full"] }
