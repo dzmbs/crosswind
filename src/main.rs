@@ -48,6 +48,10 @@ struct Cli {
     #[arg(long)]
     max_duration: Option<i32>,
 
+    /// Maximum price (in --currency units)
+    #[arg(long)]
+    max_price: Option<i64>,
+
     /// Sort by: price, duration, stops, departure
     #[arg(long, default_value = "price")]
     sort: String,
@@ -223,6 +227,9 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
 
     if let Some(max) = cli.max_duration {
         all_flights.retain(|f| f.duration_minutes <= max);
+    }
+    if let Some(max) = cli.max_price {
+        all_flights.retain(|f| f.price > 0 && f.price <= max);
     }
 
     sort_flights(&mut all_flights, &cli.sort);
