@@ -9,7 +9,7 @@
 <p align="center">Google Flights from your terminal. Built for humans and AI agents.</p>
 
 <p align="center">
-  <a href="https://github.com/dzmbs/crosswind/releases"><img src="https://img.shields.io/badge/version-v0.1.0-0EA5E9" alt="version" /></a>
+  <a href="https://github.com/dzmbs/crosswind/releases"><img src="https://img.shields.io/badge/version-v0.2.0-0EA5E9" alt="version" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="license" /></a>
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-lightgrey" alt="platforms" />
 </p>
