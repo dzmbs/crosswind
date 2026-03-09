@@ -5,7 +5,8 @@ use clap::Parser;
 
 use crosswind::date::parse_date;
 use crosswind::error::CrosswindError;
-use crosswind::output;
+use crosswind::model::{Flight, SearchResult};
+use crosswind::output::{self, OutputFormat};
 use crosswind::query::QueryParams;
 use crosswind::query::proto::Cabin;
 
@@ -16,14 +17,14 @@ struct Cli {
     /// Origin airport code (e.g. BEG, JFK, LAX)
     origin: String,
 
-    /// Destination airport code(s), comma-separated for multi-city (e.g. JFK or JFK,LHR)
+    /// Destination airport code(s), comma-separated (e.g. JFK or JFK,LHR)
     #[arg(name = "destination")]
     destinations: String,
 
     /// Departure date (apr1, 4/1, +7, tomorrow, 2026-04-01)
     date: String,
 
-    /// Return date for round-trip (same formats as departure)
+    /// Return date for round-trip
     #[arg(short, long)]
     ret: Option<String>,
 
@@ -31,13 +32,29 @@ struct Cli {
     #[arg(short, long, default_value = "economy")]
     cabin: String,
 
-    /// Number of adult passengers
+    /// Number of adult passengers (1-9)
     #[arg(short = 'p', long, default_value = "1")]
     adults: u32,
 
     /// Maximum stops (0 = nonstop only)
     #[arg(long)]
     max_stops: Option<i32>,
+
+    /// Nonstop flights only (shorthand for --max-stops 0)
+    #[arg(long)]
+    nonstop: bool,
+
+    /// Maximum flight duration in minutes
+    #[arg(long)]
+    max_duration: Option<i32>,
+
+    /// Sort by: price, duration, stops, departure
+    #[arg(long, default_value = "price")]
+    sort: String,
+
+    /// Show only the top N results
+    #[arg(long)]
+    top: Option<usize>,
 
     /// Currency code (USD, EUR, GBP, etc.)
     #[arg(long, default_value = "USD")]
@@ -51,11 +68,19 @@ struct Cli {
     #[arg(long, default_value = "30")]
     timeout: u64,
 
-    /// Force JSON output (even in TTY)
+    /// Force JSON output
     #[arg(long)]
     json: bool,
 
-    /// Open the Google Flights URL in browser instead of scraping
+    /// Output format: pretty, json, ndjson, quiet
+    #[arg(long)]
+    output: Option<String>,
+
+    /// Minimal output (cheapest price only)
+    #[arg(short, long)]
+    quiet: bool,
+
+    /// Open the Google Flights URL in browser
     #[arg(long)]
     open: bool,
 }
@@ -67,7 +92,7 @@ fn parse_cabin(s: &str) -> Result<Cabin, CrosswindError> {
         "business" | "b" => Ok(Cabin::Business),
         "first" | "f" => Ok(Cabin::First),
         _ => Err(CrosswindError::Other(format!(
-            "unknown cabin class '{s}' — use economy, premium, business, or first"
+            "unknown cabin class '{s}', use economy, premium, business, or first"
         ))),
     }
 }
@@ -80,25 +105,58 @@ fn validate_airport_code(code: &str) -> Result<String, CrosswindError> {
     Ok(code)
 }
 
+fn sort_flights(flights: &mut [Flight], sort: &str) {
+    match sort {
+        "duration" => flights.sort_by_key(|f| f.duration_minutes),
+        "stops" => flights.sort_by_key(|f| (f.stops, f.price.max(0))),
+        "departure" => flights.sort_by(|a, b| {
+            let a_key = a.segments.first().map(|s| (&s.depart_date, &s.depart_time));
+            let b_key = b.segments.first().map(|s| (&s.depart_date, &s.depart_time));
+            a_key.cmp(&b_key)
+        }),
+        _ => {
+            // default: price ascending, unknown prices last
+            flights.sort_by(|a, b| {
+                let pa = if a.price == 0 { i64::MAX } else { a.price };
+                let pb = if b.price == 0 { i64::MAX } else { b.price };
+                pa.cmp(&pb)
+            });
+        }
+    }
+}
+
+fn filter_flights(flights: Vec<Flight>, cli: &Cli) -> Vec<Flight> {
+    flights
+        .into_iter()
+        .filter(|f| {
+            if let Some(max) = cli.max_duration {
+                if f.duration_minutes > max {
+                    return false;
+                }
+            }
+            true
+        })
+        .collect()
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
+    let start = Instant::now();
+    let format = OutputFormat::detect(cli.json, cli.output.as_deref(), cli.quiet);
 
-    if let Err(e) = run(cli).await {
-        let use_json = !output::is_tty();
-        if use_json {
-            output::print_error_json(&e);
+    if let Err(e) = run(&cli, format, start).await {
+        let timing_ms = start.elapsed().as_millis() as u64;
+        if format.is_json() {
+            output::print_error_json(&e, "search", timing_ms);
         } else {
-            eprintln!("error: {e}");
-            if let Some(hint) = e.hint() {
-                eprintln!("hint: {hint}");
-            }
+            output::print_error_text(&e);
         }
         process::exit(e.exit_code());
     }
 }
 
-async fn run(cli: Cli) -> Result<(), CrosswindError> {
+async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), CrosswindError> {
     let origin = validate_airport_code(&cli.origin)?;
 
     let destinations: Vec<String> = cli
@@ -123,6 +181,9 @@ async fn run(cli: Cli) -> Result<(), CrosswindError> {
         )));
     }
 
+    // --nonstop is sugar for --max-stops 0
+    let max_stops = if cli.nonstop { Some(0) } else { cli.max_stops };
+
     let params = QueryParams {
         origin,
         destinations: destinations.clone(),
@@ -130,7 +191,7 @@ async fn run(cli: Cli) -> Result<(), CrosswindError> {
         return_date,
         cabin,
         adults: cli.adults,
-        max_stops: cli.max_stops,
+        max_stops,
         currency: cli.currency.clone(),
         lang: cli.lang.clone(),
     };
@@ -146,9 +207,6 @@ async fn run(cli: Cli) -> Result<(), CrosswindError> {
         return Ok(());
     }
 
-    let use_json = cli.json || !output::is_tty();
-    let start = Instant::now();
-
     // Search each destination
     let mut all_flights = Vec::new();
     let mut all_airlines = Vec::new();
@@ -163,30 +221,40 @@ async fn run(cli: Cli) -> Result<(), CrosswindError> {
     all_airlines.sort_by(|a, b| a.code.cmp(&b.code));
     all_airlines.dedup_by(|a, b| a.code == b.code);
 
-    // Sort by price (0 = unknown, push to end)
-    all_flights.sort_by(|a, b| {
-        let pa = if a.price == 0 { i64::MAX } else { a.price };
-        let pb = if b.price == 0 { i64::MAX } else { b.price };
-        pa.cmp(&pb)
-    });
+    // Client-side filters
+    let mut all_flights = filter_flights(all_flights, cli);
 
-    let result = crosswind::model::SearchResult {
+    // Sort
+    sort_flights(&mut all_flights, &cli.sort);
+
+    // Top N
+    if let Some(top) = cli.top {
+        all_flights.truncate(top);
+    }
+
+    let result = SearchResult {
         flights: all_flights,
         airlines: all_airlines,
     };
 
     let timing_ms = start.elapsed().as_millis() as u64;
 
-    if use_json {
-        output::print_json(&result, "search", timing_ms);
-    } else {
-        output::print_table(&result, &cli.currency);
-        eprintln!(
-            "\n{} flights found in {:.1}s",
-            result.flights.len(),
-            timing_ms as f64 / 1000.0,
-        );
+    match format {
+        OutputFormat::Json => output::print_json(&result, "search", timing_ms),
+        OutputFormat::Ndjson => output::print_ndjson(&result),
+        OutputFormat::Quiet => output::print_quiet(&result, &cli.currency),
+        OutputFormat::Pretty => {
+            output::print_table(&result, &cli.currency);
+            eprintln!(
+                "\n{DIM}{} flights · {:.1}s{RESET}",
+                result.flights.len(),
+                timing_ms as f64 / 1000.0,
+            );
+        }
     }
 
     Ok(())
 }
+
+const DIM: &str = "\x1b[2m";
+const RESET: &str = "\x1b[0m";

@@ -1,8 +1,52 @@
-use std::io::{self, IsTerminal};
+use std::io::{self, IsTerminal, Write};
 
 use serde_json::{Value, json};
 
 use crate::model::SearchResult;
+
+/// Output format, matching heat-cli/hlz conventions.
+#[derive(Clone, Copy, PartialEq)]
+pub enum OutputFormat {
+    /// Styled table for humans (TTY)
+    Pretty,
+    /// JSON envelope (piped or --json)
+    Json,
+    /// Newline-delimited JSON, one flight per line
+    Ndjson,
+    /// Minimal output (just count or first price)
+    Quiet,
+}
+
+impl OutputFormat {
+    /// Auto-detect format from flags and TTY state.
+    /// Priority: explicit flags > TTY detection.
+    pub fn detect(json: bool, output: Option<&str>, quiet: bool) -> Self {
+        if quiet {
+            return Self::Quiet;
+        }
+        if let Some(fmt) = output {
+            return match fmt {
+                "json" => Self::Json,
+                "ndjson" | "jsonl" => Self::Ndjson,
+                "pretty" => Self::Pretty,
+                "quiet" => Self::Quiet,
+                _ => Self::Json,
+            };
+        }
+        if json {
+            return Self::Json;
+        }
+        if io::stdout().is_terminal() {
+            Self::Pretty
+        } else {
+            Self::Json
+        }
+    }
+
+    pub fn is_json(&self) -> bool {
+        matches!(self, Self::Json | Self::Ndjson)
+    }
+}
 
 pub fn is_tty() -> bool {
     io::stdout().is_terminal()
@@ -51,7 +95,7 @@ pub fn print_table(result: &SearchResult, currency: &str) {
         return;
     }
 
-    // header
+    // header to stderr (diagnostics)
     eprintln!(
         "{DIM}  #  Price    Airlines                  Route       Depart       Arrive       Dur       Stops{RESET}"
     );
@@ -65,16 +109,8 @@ pub fn print_table(result: &SearchResult, currency: &str) {
 
         let route = format!("{}→{}", first_seg.from_code, last_seg.to_code);
         let airlines_str = flight.airlines.join(", ");
-        let depart = format!(
-            "{} {}",
-            first_seg.depart_date.chars().skip(5).collect::<String>(),
-            first_seg.depart_time
-        );
-        let arrive = format!(
-            "{} {}",
-            last_seg.arrive_date.chars().skip(5).collect::<String>(),
-            last_seg.arrive_time
-        );
+        let depart = format!("{} {}", &first_seg.depart_date[5..], first_seg.depart_time);
+        let arrive = format!("{} {}", &last_seg.arrive_date[5..], last_seg.arrive_time);
         let price_str = if flight.price > 0 {
             format!("{sym}{}", flight.price)
         } else {
@@ -101,9 +137,6 @@ pub fn print_table(result: &SearchResult, currency: &str) {
             println!("{}", line.trim_end());
         }
     }
-
-    eprintln!();
-    eprintln!("{DIM}{} flights found{RESET}", result.flights.len());
 }
 
 fn truncate(s: &str, max: usize) -> String {
@@ -129,7 +162,32 @@ pub fn print_json(result: &SearchResult, cmd: &str, timing_ms: u64) {
     println!("{}", serde_json::to_string_pretty(&envelope).unwrap());
 }
 
-pub fn print_error_json(err: &crate::error::CrosswindError) {
-    let envelope = err.to_json();
+pub fn print_ndjson(result: &SearchResult) {
+    let stdout = io::stdout();
+    let mut out = stdout.lock();
+    for flight in &result.flights {
+        let _ = serde_json::to_writer(&mut out, flight);
+        let _ = out.write_all(b"\n");
+    }
+}
+
+pub fn print_quiet(result: &SearchResult, currency: &str) {
+    if result.flights.is_empty() {
+        return;
+    }
+    let sym = currency_symbol(currency);
+    let cheapest = &result.flights[0];
+    println!("{sym}{}", cheapest.price);
+}
+
+pub fn print_error_json(err: &crate::error::CrosswindError, cmd: &str, timing_ms: u64) {
+    let envelope = err.to_json(cmd, timing_ms);
     println!("{}", serde_json::to_string_pretty(&envelope).unwrap());
+}
+
+pub fn print_error_text(err: &crate::error::CrosswindError) {
+    eprintln!("error: {err}");
+    if let Some(hint) = err.hint() {
+        eprintln!("hint: {hint}");
+    }
 }

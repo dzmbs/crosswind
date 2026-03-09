@@ -14,7 +14,7 @@ pub enum CrosswindError {
     InvalidPassengers(String),
 
     // Network (exit code 3)
-    #[error("request timed out — try increasing --timeout or check your connection")]
+    #[error("request timed out")]
     Timeout,
 
     #[error("connection failed: {0}")]
@@ -30,14 +30,14 @@ pub enum CrosswindError {
     ProxyError(String),
 
     // Rate limit / blocked (exit code 4)
-    #[error("rate limited by Google — wait a few minutes or use --proxy")]
+    #[error("rate limited by Google")]
     RateLimited,
 
-    #[error("blocked by Google (HTTP {0}) — this usually means bot detection")]
+    #[error("blocked by Google (HTTP {0})")]
     Blocked(u16),
 
     // Parse (exit code 5)
-    #[error("could not find flight data in page — Google may have changed the page structure")]
+    #[error("could not find flight data in page")]
     ScriptTagNotFound,
 
     #[error("failed to parse flight data: {0}")]
@@ -91,11 +91,11 @@ impl CrosswindError {
 
     pub fn hint(&self) -> Option<&str> {
         match self {
-            Self::Timeout => Some("try increasing --timeout or check your connection"),
-            Self::RateLimited => Some("wait a few minutes before retrying, or use --proxy"),
-            Self::Blocked(_) => Some("try again later or use --proxy"),
+            Self::Timeout => Some("increase --timeout or check your connection"),
+            Self::RateLimited => Some("wait a few minutes before retrying"),
+            Self::Blocked(_) => Some("try again later"),
             Self::ScriptTagNotFound => {
-                Some("Google may have changed their page structure — check for updates")
+                Some("Google may have changed their page structure, check for updates")
             }
             Self::NoResults => Some("try a different date or route"),
             Self::InvalidAirportCode(_) => Some("use a 3-letter IATA code like JFK, LAX, BEG"),
@@ -103,12 +103,28 @@ impl CrosswindError {
         }
     }
 
-    pub fn to_json(&self) -> Value {
+    pub fn retryable(&self) -> bool {
+        matches!(
+            self,
+            Self::Timeout
+                | Self::ConnectionFailed(_)
+                | Self::DnsResolution(_)
+                | Self::TlsError(_)
+                | Self::ProxyError(_)
+                | Self::RateLimited
+                | Self::Blocked(_)
+        )
+    }
+
+    pub fn to_json(&self, cmd: &str, timing_ms: u64) -> Value {
         let mut obj = json!({
             "v": 1,
             "status": "error",
+            "cmd": cmd,
             "code": self.reason_code(),
             "message": self.to_string(),
+            "retryable": self.retryable(),
+            "timing_ms": timing_ms,
         });
         if let Some(hint) = self.hint() {
             obj["hint"] = json!(hint);
