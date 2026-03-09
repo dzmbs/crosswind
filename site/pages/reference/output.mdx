@@ -1,0 +1,117 @@
+# Output Modes
+
+Crosswind separates data from diagnostics and supports automatic format detection.
+
+## The contract
+
+- **stdout** = flight data (JSON, tables)
+- **stderr** = diagnostics (timing, hints, error messages in TTY mode)
+
+This separation means you can safely pipe Crosswind's output into `jq` or other tools without diagnostic noise contaminating the data stream.
+
+## Auto-detection
+
+When you do not specify a format, Crosswind auto-detects:
+- TTY stdout → styled table
+- Non-TTY stdout (pipe, redirect) → JSON envelope
+
+### Force JSON in a terminal
+
+```bash
+crosswind BEG JFK apr1 --json
+```
+
+## JSON envelope
+
+All JSON output follows a consistent envelope:
+
+```json
+{
+  "v": 1,
+  "status": "ok",
+  "cmd": "search",
+  "data": {
+    "flights": [...],
+    "airlines": [...]
+  },
+  "timing_ms": 1423
+}
+```
+
+| Field | Description |
+|---|---|
+| `v` | Envelope version (always `1`) |
+| `status` | `"ok"` or `"error"` |
+| `cmd` | Command name (`"search"`) |
+| `data` | Search results (flights + airline metadata) |
+| `timing_ms` | Request duration in milliseconds |
+
+## Flight object
+
+Each flight in `data.flights` contains:
+
+```json
+{
+  "airlines": ["LOT"],
+  "segments": [...],
+  "price": 627,
+  "stops": 1,
+  "duration_minutes": 855,
+  "is_best": true,
+  "carbon_grams": 284000,
+  "typical_carbon_grams": 310000
+}
+```
+
+## Segment object
+
+Each segment in a flight:
+
+```json
+{
+  "from_code": "BEG",
+  "from_name": "Belgrade Nikola Tesla Airport",
+  "to_code": "WAW",
+  "to_name": "Warsaw Chopin Airport",
+  "depart_date": "2026-04-01",
+  "depart_time": "06:15",
+  "arrive_date": "2026-04-01",
+  "arrive_time": "07:45",
+  "duration_minutes": 90,
+  "aircraft": "Embraer 195",
+  "flight_number": "LO 572"
+}
+```
+
+## Error envelope
+
+When an error occurs in JSON mode:
+
+```json
+{
+  "v": 1,
+  "status": "error",
+  "code": "invalid_airport_code",
+  "message": "airport code must be exactly 3 letters, got 'XX'",
+  "hint": "use a 3-letter IATA code like JFK, LAX, BEG"
+}
+```
+
+## Piping with jq
+
+```bash
+# Count flights
+crosswind BEG JFK apr1 | jq '.data.flights | length'
+
+# Cheapest flight
+crosswind BEG JFK apr1 | jq '.data.flights[0]'
+
+# All nonstop flights
+crosswind BEG JFK apr1 | jq '[.data.flights[] | select(.stops == 0)]'
+
+# Flight numbers only
+crosswind BEG JFK apr1 | jq '[.data.flights[].segments[].flight_number]'
+
+# Best flights under $800
+crosswind BEG JFK apr1 | jq '[.data.flights[] | select(.is_best and .price < 800)]'
+```

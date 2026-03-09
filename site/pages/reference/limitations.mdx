@@ -1,0 +1,45 @@
+# Limitations
+
+Crosswind is an early release. This page documents known limitations and risks.
+
+## Google dependency
+
+Crosswind scrapes Google Flights. This means:
+
+- **No API guarantee.** Google can change their page structure at any time, which would break parsing (exit code 5).
+- **Rate limiting.** Too many requests will trigger HTTP 429 responses. Space your requests.
+- **Bot detection.** Google may block requests that appear automated, returning 403 or 503 (exit code 4).
+- **Regional variation.** Results may differ based on your IP location and the `--lang`/`--currency` settings.
+
+## Not a booking tool
+
+Crosswind is read-only. It searches and displays flight information but cannot book flights. Use `--open` to continue on Google Flights in your browser.
+
+## Data accuracy
+
+- Prices shown are the prices Google Flights reports at search time. They may change by the time you book.
+- Some flights may show `$0` price if Google doesn't have pricing data for that result.
+- Carbon emission estimates are provided by Google and may not be available for all flights.
+
+## Missing features (planned)
+
+These features are planned for future releases:
+
+- **Price alerts**: monitor a route and notify on price drops
+- **Sorting options**: sort by duration, departure time, etc.
+- **SOCKS proxy support**: route requests through a proxy (the dependency supports it, CLI flag not yet exposed)
+- **Multi-city itineraries**: A→B→C style trips (not same as multi-destination comparison)
+
+## Platform notes
+
+- **TLS fingerprinting.** Crosswind impersonates Chrome's TLS fingerprint. This is required for Google to return full flight data. Without it, Google returns an empty page shell.
+- **Binary size.** The release binary is ~15-20MB due to TLS and HTTP dependencies. This is expected for a statically-linked Rust binary with Chrome TLS impersonation.
+- **Protobuf encoding.** Search parameters are encoded as Protocol Buffers, matching Google Flights' internal format. If Google changes their protobuf schema, the search encoding would need to be updated.
+
+## Reporting issues
+
+If Crosswind stops working (especially exit code 5 errors), Google may have changed their page structure. Please report issues at:
+
+[github.com/dzmbs/crosswind/issues](https://github.com/dzmbs/crosswind/issues)
+
+Include the command you ran, the exit code, and the error message.

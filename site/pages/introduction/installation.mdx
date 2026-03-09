@@ -1,0 +1,80 @@
+# Installation
+
+## Quick install (recommended)
+
+The installer detects your OS and architecture, downloads a prebuilt binary, and falls back to cargo if needed.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dzmbs/crosswind/main/install.sh | bash
+```
+
+By default, the binary is installed to `~/.local/bin`. Override with `CROSSWIND_INSTALL_DIR`:
+
+```bash
+CROSSWIND_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/dzmbs/crosswind/main/install.sh | bash
+```
+
+## From source (cargo install)
+
+Requires Rust 1.88 or later.
+
+### From Git
+
+```bash
+cargo install --git https://github.com/dzmbs/crosswind --bin crosswind
+```
+
+### From a local checkout
+
+```bash
+git clone https://github.com/dzmbs/crosswind.git
+cd crosswind
+cargo install --path .
+```
+
+## Pre-built binaries (manual)
+
+Download the latest release tarball for your platform from the [releases page](https://github.com/dzmbs/crosswind/releases).
+
+```bash
+# Example for macOS arm64
+tar xzf crosswind-v0.1.0-macos-aarch64.tar.gz
+sudo mv crosswind /usr/local/bin/
+```
+
+Or place it anywhere on your `PATH`:
+
+```bash
+mkdir -p ~/.local/bin
+mv crosswind ~/.local/bin/
+```
+
+## Verify installation
+
+```bash
+crosswind --version
+crosswind --help
+```
+
+## Supported platforms
+
+| Platform | Architecture | Status |
+|---|---|---|
+| macOS | arm64 (Apple Silicon) | Supported |
+| macOS | x86_64 (Intel) | Supported |
+| Linux | x86_64 | Supported |
+| Linux | arm64 | Best-effort |
+| Windows | x86_64 | Best-effort |
+
+"Best-effort" means it should work but is not part of the primary test matrix.
+
+## Build from source
+
+```bash
+cargo build --release
+# Binary is at target/release/crosswind
+```
+
+:::tip[Rust version]
+Crosswind requires Rust 1.88 or later. Run `rustup update stable` to get the latest stable toolchain.
+:::

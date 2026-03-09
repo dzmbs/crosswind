@@ -1,0 +1,79 @@
+# Filters
+
+Crosswind supports several filters to narrow search results.
+
+## Cabin class
+
+Use `-c` or `--cabin` to select cabin class:
+
+```bash
+crosswind BEG JFK apr1 -c economy      # default
+crosswind BEG JFK apr1 -c premium      # premium economy
+crosswind BEG JFK apr1 -c business
+crosswind BEG JFK apr1 -c first
+```
+
+Short aliases work too: `e`, `pe`, `b`, `f`.
+
+## Maximum stops
+
+Use `--max-stops` to limit connections:
+
+```bash
+crosswind LAX JFK apr1 --max-stops 0   # nonstop only
+crosswind LAX JFK apr1 --max-stops 1   # 1 stop max
+```
+
+Without this flag, all results are returned regardless of stop count.
+
+## Passengers
+
+Use `-p` or `--adults` to set passenger count (1-9):
+
+```bash
+crosswind BEG JFK apr1 -p 2
+crosswind BEG JFK apr1 -p 4
+```
+
+Prices returned reflect the per-person fare.
+
+## Currency
+
+Use `--currency` to change the price currency:
+
+```bash
+crosswind BEG JFK apr1 --currency EUR
+crosswind BEG JFK apr1 --currency GBP
+crosswind BEG JFK apr1 --currency RSD
+```
+
+Defaults to `USD`. Uses standard 3-letter ISO 4217 currency codes.
+
+## Language
+
+Use `--lang` to change the Google Flights interface language:
+
+```bash
+crosswind BEG JFK apr1 --lang de
+crosswind BEG JFK apr1 --lang fr
+```
+
+Defaults to `en`. This affects airport names and airline names in the results.
+
+## Timeout
+
+Use `--timeout` to adjust the request timeout in seconds:
+
+```bash
+crosswind BEG JFK apr1 --timeout 60
+```
+
+Defaults to 30 seconds. Increase if you have a slow connection.
+
+## Combining filters
+
+All filters compose naturally:
+
+```bash
+crosswind BEG JFK apr1 -r apr16 -c business -p 2 --max-stops 1 --currency EUR
+```

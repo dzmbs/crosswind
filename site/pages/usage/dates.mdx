@@ -1,0 +1,49 @@
+# Date Formats
+
+Crosswind accepts dates in many formats. All date arguments (departure and return) use the same parser.
+
+## Supported formats
+
+| Format | Example | Resolves to |
+|---|---|---|
+| Short month + day | `apr1`, `apr01`, `mar28` | 2026-04-01 |
+| Slash (no year) | `4/1`, `12/25` | Next occurrence |
+| Slash (with year) | `4/1/2026` | 2026-04-01 |
+| ISO 8601 | `2026-04-01` | 2026-04-01 |
+| Relative days | `+7`, `+30` | 7/30 days from today |
+| Named | `today`, `tomorrow` | Current/next day |
+| Month only | `apr`, `december` | 1st of that month |
+
+## Future-biased resolution
+
+When you use a format without a year (like `apr1` or `4/1`), Crosswind picks the next occurrence:
+
+- If `apr1` is in the future this year, it uses this year
+- If `apr1` has already passed, it uses next year
+
+This means you never have to think about the year for upcoming trips.
+
+## Examples
+
+```bash
+# All of these work as the date argument
+crosswind BEG JFK apr1
+crosswind BEG JFK 4/1
+crosswind BEG JFK 4/1/2026
+crosswind BEG JFK 2026-04-01
+crosswind BEG JFK +7
+crosswind BEG JFK tomorrow
+crosswind BEG JFK apr
+
+# Return dates use the same formats
+crosswind BEG JFK apr1 -r apr16
+crosswind BEG JFK tomorrow -r +14
+```
+
+## Error messages
+
+If Crosswind cannot parse a date, it provides a helpful error:
+
+```
+error: cannot parse date 'xyz', try apr1, 4/1, +7, or 2026-04-01
+```

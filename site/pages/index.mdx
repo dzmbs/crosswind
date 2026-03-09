@@ -1,0 +1,111 @@
+---
+title: Crosswind | Google Flights CLI
+content:
+  width: 100%
+layout: landing
+logo: false
+outline: false
+---
+
+import { HomePage } from 'vocs/components'
+
+<HomePage.Root>
+  <HomePage.Tagline>Google Flights from your terminal</HomePage.Tagline>
+
+<div className="max-md:-mx-[var(--vocs-content_horizontalPadding,24px)] max-md:[&_[data-v-code-container]]:!rounded-none max-md:[&_pre]:!whitespace-pre-wrap max-md:[&_pre]:!overflow-x-hidden max-md:[&_pre]:!break-all max-md:[&_code]:!block max-md:[&_code]:!whitespace-pre-wrap max-md:[&_code]:!break-all max-md:[&_.line]:!whitespace-pre-wrap max-md:[&_.line]:!break-all">
+```bash
+curl -fsSL https://raw.githubusercontent.com/dzmbs/crosswind/main/install.sh | bash
+```
+</div>
+
+  <HomePage.Description>
+    Search, compare, and pipe flight data. Positional args, smart dates, structured JSON. For humans and AI agents.
+  </HomePage.Description>
+  <HomePage.Buttons>
+    <HomePage.Button href="/introduction/getting-started" variant="accent">Get Started</HomePage.Button>
+    <HomePage.Button href="/usage/searching">Usage</HomePage.Button>
+    <HomePage.Button href="https://github.com/dzmbs/crosswind">GitHub</HomePage.Button>
+  </HomePage.Buttons>
+</HomePage.Root>
+
+<div style={{ maxWidth: '800px', margin: '0 auto' }}>
+
+{/* ── Features ── */}
+
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', margin: '48px 0' }}>
+  <a href="/usage/searching" style={{ textDecoration: 'none', color: 'inherit', padding: '24px', borderRadius: '12px', border: '1px solid var(--vocs-color_border)', transition: 'border-color 0.2s' }}>
+    <div style={{ fontWeight: 700, marginBottom: '4px' }}>Positional Args</div>
+    <div style={{ fontSize: '14px', opacity: 0.7 }}>crosswind BEG JFK apr1. No flag soup. Origin, destination, date as natural positional arguments.</div>
+  </a>
+  <a href="/usage/dates" style={{ textDecoration: 'none', color: 'inherit', padding: '24px', borderRadius: '12px', border: '1px solid var(--vocs-color_border)', transition: 'border-color 0.2s' }}>
+    <div style={{ fontWeight: 700, marginBottom: '4px' }}>Smart Dates</div>
+    <div style={{ fontSize: '14px', opacity: 0.7 }}>apr1, 4/1, +7, tomorrow, 2026-04-01. Type dates the way you think about them.</div>
+  </a>
+  <a href="/reference/output" style={{ textDecoration: 'none', color: 'inherit', padding: '24px', borderRadius: '12px', border: '1px solid var(--vocs-color_border)', transition: 'border-color 0.2s' }}>
+    <div style={{ fontWeight: 700, marginBottom: '4px' }}>Pipe-Aware Output</div>
+    <div style={{ fontSize: '14px', opacity: 0.7 }}>TTY = styled table. Piped = structured JSON envelope. --json to force. Pipe to jq, feed to agents.</div>
+  </a>
+  <a href="/reference/agent-integration" style={{ textDecoration: 'none', color: 'inherit', padding: '24px', borderRadius: '12px', border: '1px solid var(--vocs-color_border)', transition: 'border-color 0.2s' }}>
+    <div style={{ fontWeight: 700, marginBottom: '4px' }}>Agent-First Design</div>
+    <div style={{ fontSize: '14px', opacity: 0.7 }}>Semantic exit codes, structured errors with hints, JSON envelopes with timing. Built for automation.</div>
+  </a>
+  <a href="/usage/filters" style={{ textDecoration: 'none', color: 'inherit', padding: '24px', borderRadius: '12px', border: '1px solid var(--vocs-color_border)', transition: 'border-color 0.2s' }}>
+    <div style={{ fontWeight: 700, marginBottom: '4px' }}>Filters and Cabin Class</div>
+    <div style={{ fontSize: '14px', opacity: 0.7 }}>Nonstop only, business class, multiple passengers. --max-stops 0 -c business -p 2.</div>
+  </a>
+  <a href="/usage/multi-destination" style={{ textDecoration: 'none', color: 'inherit', padding: '24px', borderRadius: '12px', border: '1px solid var(--vocs-color_border)', transition: 'border-color 0.2s' }}>
+    <div style={{ fontWeight: 700, marginBottom: '4px' }}>Multi-Destination</div>
+    <div style={{ fontSize: '14px', opacity: 0.7 }}>Compare routes in one command. crosswind BEG JFK,LHR,CDG apr1. All results merged and sorted.</div>
+  </a>
+</div>
+
+{/* ── Code example ── */}
+
+<div style={{ textAlign: 'center', marginTop: '64px' }}>
+
+<div style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#0EA5E9', marginBottom: '8px' }}>CLI</div>
+
+## Search, Filter, Pipe
+
+</div>
+
+```bash
+# Basic one-way search
+crosswind BEG JFK apr1
+
+# Round-trip, business class
+crosswind BEG JFK apr1 -r apr16 -c business
+
+# Nonstop only, JSON output
+crosswind LAX JFK tomorrow --max-stops 0 --json
+
+# Compare multiple destinations
+crosswind BEG JFK,LHR,CDG apr1 | jq '.data.flights[:3]'
+
+# Open in browser instead
+crosswind BEG JFK apr1 --open
+```
+
+{/* ── How it works ── */}
+
+<div style={{ textAlign: 'center', marginTop: '64px' }}>
+
+<div style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#0EA5E9', marginBottom: '8px' }}>Under the Hood</div>
+
+## How It Works
+
+</div>
+
+<div style={{ fontSize: '15px', opacity: 0.8, lineHeight: 1.7, margin: '16px 0 48px' }}>
+Crosswind encodes your search as a Protocol Buffer, fetches the Google Flights page with Chrome TLS fingerprinting, and extracts structured flight data from the embedded JSON payload. No API key needed. No headless browser. Single static binary.
+</div>
+
+---
+
+<div style={{ textAlign: 'center', fontSize: '14px', color: '#888', paddingBottom: '24px' }}>
+
+v0.1.0, early release. Google may change their page structure at any time. [Limitations](/reference/limitations).
+
+</div>
+
+</div>

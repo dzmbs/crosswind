@@ -1,0 +1,107 @@
+# Agent Integration
+
+Crosswind is designed for AI agents and automation from the ground up.
+
+## stdout/stderr contract
+
+- **stdout** = structured data only (JSON or table)
+- **stderr** = human diagnostics (timing, hints)
+
+Your agent captures stdout for data. Exit codes provide semantic status without parsing.
+
+## Recommended agent pattern
+
+```bash
+# 1. Search with JSON output
+RESULT=$(crosswind BEG JFK apr1 --json 2>/dev/null)
+EXIT=$?
+
+# 2. Check exit code
+if [ $EXIT -ne 0 ]; then
+  ERROR=$(echo "$RESULT" | jq -r '.message')
+  HINT=$(echo "$RESULT" | jq -r '.hint // empty')
+  # Handle error based on exit code
+fi
+
+# 3. Process results
+FLIGHTS=$(echo "$RESULT" | jq '.data.flights | length')
+CHEAPEST=$(echo "$RESULT" | jq '.data.flights[0].price')
+```
+
+## JSON envelope
+
+Every successful response:
+
+```json
+{
+  "v": 1,
+  "status": "ok",
+  "cmd": "search",
+  "data": { "flights": [...], "airlines": [...] },
+  "timing_ms": 1423
+}
+```
+
+Every error response:
+
+```json
+{
+  "v": 1,
+  "status": "error",
+  "code": "rate_limited",
+  "message": "rate limited by Google, wait a few minutes or use --proxy",
+  "hint": "wait a few minutes before retrying, or use --proxy"
+}
+```
+
+## Exit codes for agents
+
+| Code | Meaning | Agent action |
+|---|---|---|
+| `0` | Success | Parse `data` |
+| `2` | Bad input | Fix arguments, do not retry |
+| `3` | Network | Retry with backoff |
+| `4` | Rate limited | Wait 2-5 min, then retry |
+| `5` | Parse error | Report to user, may need update |
+| `1` | Other | Log and report |
+
+## Example: cheapest flight finder
+
+```bash
+#!/bin/bash
+# Find the cheapest nonstop flight from BEG to any of these cities
+DESTS="JFK,LHR,CDG,AMS,FRA"
+
+RESULT=$(crosswind BEG "$DESTS" +7 --max-stops 0 --json 2>/dev/null)
+if [ $? -ne 0 ]; then
+  echo "Search failed: $(echo "$RESULT" | jq -r '.message')"
+  exit 1
+fi
+
+echo "$RESULT" | jq -r '
+  .data.flights[0] |
+  "Cheapest: \(.segments[0].from_code)→\(.segments[-1].to_code) $\(.price) via \(.airlines | join("/")) (\(.duration_minutes / 60 | floor)h)"
+'
+```
+
+## Example: price monitoring
+
+```bash
+#!/bin/bash
+# Log cheapest BEG→JFK price daily
+PRICE=$(crosswind BEG JFK +30 --json 2>/dev/null | jq '.data.flights[0].price')
+echo "$(date +%Y-%m-%d),$PRICE" >> prices.csv
+```
+
+## Rate limiting
+
+Google may rate-limit or block if you make too many requests. Recommendations:
+
+- Space requests at least 10 seconds apart
+- Randomize timing for scheduled tasks
+- Monitor exit code 4 and back off when detected
+- Consider using `--timeout 60` for reliability
+
+:::tip[Agent-friendly by design]
+The stdout/stderr split, semantic exit codes, and structured JSON envelopes mean your agent never has to parse human-readable text. Check the exit code, parse the JSON, act on the data.
+:::

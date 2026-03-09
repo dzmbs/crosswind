@@ -1,0 +1,100 @@
+# Getting Started
+
+Install Crosswind and run your first flight search in under a minute.
+
+:::info[What is Crosswind?]
+Crosswind is a CLI tool that searches Google Flights from your terminal. It uses positional arguments, smart date parsing, and outputs structured JSON. Designed for both humans and AI agents.
+:::
+
+## 1. Install Crosswind
+
+```bash
+# One-command install (recommended)
+curl -fsSL https://raw.githubusercontent.com/dzmbs/crosswind/main/install.sh | bash
+
+# Or install with cargo
+cargo install --git https://github.com/dzmbs/crosswind --bin crosswind
+```
+
+Confirm it works:
+
+```bash
+crosswind --version
+crosswind --help
+```
+
+See [Installation](/introduction/installation) for other methods and platform details.
+
+## 2. Search for flights
+
+```bash
+# One-way: Belgrade to New York, April 1st
+crosswind BEG JFK apr1
+
+# Round-trip with return date
+crosswind BEG JFK apr1 -r apr16
+```
+
+Crosswind uses 3-letter IATA airport codes. The date accepts many formats: `apr1`, `4/1`, `+7`, `tomorrow`, or `2026-04-01`.
+
+## 3. Filter results
+
+```bash
+# Nonstop flights only
+crosswind LAX JFK apr1 --max-stops 0
+
+# Business class, 2 passengers
+crosswind BEG LHR apr1 -c business -p 2
+
+# Prices in EUR
+crosswind BEG CDG apr1 --currency EUR
+```
+
+## 4. Get JSON output
+
+When piped, Crosswind automatically outputs JSON. Force it in a terminal with `--json`:
+
+```bash
+# Auto JSON when piped
+crosswind BEG JFK apr1 | jq '.data.flights[0]'
+
+# Force JSON in terminal
+crosswind BEG JFK apr1 --json
+```
+
+The JSON envelope follows a consistent structure:
+
+```json
+{
+  "v": 1,
+  "status": "ok",
+  "cmd": "search",
+  "data": { "flights": [...], "airlines": [...] },
+  "timing_ms": 1423
+}
+```
+
+## 5. Compare destinations
+
+Search multiple destinations in one command:
+
+```bash
+crosswind BEG JFK,LHR,CDG apr1
+```
+
+Results are merged and sorted by price.
+
+## 6. Open in browser
+
+Preview the search on Google Flights directly:
+
+```bash
+crosswind BEG JFK apr1 --open
+```
+
+## Next steps
+
+- [Date Formats](/usage/dates)
+- [Filters](/usage/filters)
+- [Output Modes](/reference/output)
+- [Agent Integration](/reference/agent-integration)

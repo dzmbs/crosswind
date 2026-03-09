@@ -1,0 +1,51 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+/* crosswind: open sky, travel, clean */
+
+:root {
+  --crosswind-font-display: "Inter", "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-layout="landing"] .vocs_Content,
+[data-layout="landing"] .vocs_HomePage {
+  font-family: var(--crosswind-font-display);
+}
+
+[data-layout="landing"] .vocs_DesktopTopNav .vocs_DesktopSearch_search {
+  margin: 0 auto;
+}
+
+:root {
+  --vocs-color_accent: #0EA5E9;
+  --vocs-color_accentHover: #0284C7;
+  --vocs-color_accentText: #fff;
+  --vocs-color_background: #FAFCFF;
+  --vocs-color_backgroundDark: #F0F7FF;
+}
+
+:root.dark {
+  --vocs-color_accent: #38BDF8;
+  --vocs-color_accentHover: #7DD3FC;
+  --vocs-color_accentText: #0c1929;
+}
+
+/* Feature cards */
+.vocs_Content a[href]:has(> div) {
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.vocs_Content a[href]:has(> div):hover {
+  border-color: #0EA5E9 !important;
+  background: rgba(14, 165, 233, 0.04);
+}
+:root.dark .vocs_Content a[href]:has(> div):hover {
+  border-color: #38BDF8 !important;
+  background: rgba(56, 189, 248, 0.06);
+}
+
+/* Inline code tint */
+.vocs_Content :not(pre) > code {
+  color: #0369A1;
+}
+:root.dark .vocs_Content :not(pre) > code {
+  color: #7DD3FC;
+}

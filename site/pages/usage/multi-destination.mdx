@@ -1,0 +1,53 @@
+# Multi-Destination
+
+Crosswind can search multiple destinations in a single command.
+
+## Syntax
+
+Separate destination airport codes with commas:
+
+```bash
+crosswind BEG JFK,LHR,CDG apr1
+```
+
+This runs three separate searches (BEG→JFK, BEG→LHR, BEG→CDG), merges all results, and sorts by price.
+
+## Use cases
+
+### Comparing hubs
+
+Find the cheapest way to get from Belgrade to the US East Coast:
+
+```bash
+crosswind BEG JFK,EWR,IAD apr1
+```
+
+### Exploring destinations
+
+Compare prices to multiple European cities:
+
+```bash
+crosswind JFK LHR,CDG,AMS,FRA apr1 --currency EUR
+```
+
+### Finding the cheapest option
+
+Pipe to jq to get just the cheapest flight across all destinations:
+
+```bash
+crosswind BEG JFK,LHR,CDG apr1 | jq '.data.flights[0]'
+```
+
+## How it works
+
+1. Crosswind searches each destination sequentially
+2. All flights are merged into a single result set
+3. Airlines are deduplicated by code
+4. Flights are sorted by price (ascending, unknown prices last)
+5. The JSON envelope contains all flights from all destinations
+
+## Limitations
+
+- Each destination adds one HTTP request, so multi-destination searches take proportionally longer
+- Google may rate-limit if you search too many destinations at once
+- The `--open` flag only opens the first destination in the browser

@@ -1,0 +1,70 @@
+# Searching Flights
+
+Crosswind uses positional arguments for the most common parameters. No flag soup.
+
+## Basic syntax
+
+```bash
+crosswind <ORIGIN> <DESTINATION> <DATE>
+```
+
+All three arguments are required. Origin and destination are 3-letter IATA airport codes. Date accepts [many formats](/usage/dates).
+
+## One-way search
+
+```bash
+crosswind BEG JFK apr1
+crosswind LAX SFO tomorrow
+crosswind LHR CDG +7
+```
+
+## Round-trip search
+
+Add `-r` or `--ret` with a return date:
+
+```bash
+crosswind BEG JFK apr1 -r apr16
+crosswind LAX NRT 6/15 -r 6/30
+```
+
+## What you get
+
+In a terminal, Crosswind displays a styled table:
+
+```
+| # | Airlines       | Route   | Depart           | Arrive           | Duration | Stops   | Price |
+|---|----------------|---------|------------------|------------------|----------|---------|-------|
+| 1 | LOT            | BEG→JFK | 2026-04-01 06:15 | 2026-04-01 11:30 | 14h 15m  | 1 stop  | $627  |
+| 2 | Turkish Airlines| BEG→JFK | 2026-04-01 18:40 | 2026-04-02 08:15 | 18h 35m  | 1 stop  | $643  |
+```
+
+When piped to another program, it outputs a JSON envelope automatically:
+
+```bash
+crosswind BEG JFK apr1 | jq '.data.flights | length'
+# 53
+```
+
+## Opening in browser
+
+Use `--open` to open the Google Flights search in your default browser instead of scraping:
+
+```bash
+crosswind BEG JFK apr1 --open
+```
+
+Useful for booking. Crosswind finds the flights, you complete the purchase on Google Flights.
+
+## Full flag reference
+
+| Flag | Short | Description | Default |
+|---|---|---|---|
+| `--ret` | `-r` | Return date (round-trip) | — |
+| `--cabin` | `-c` | Cabin class | `economy` |
+| `--adults` | `-p` | Passenger count | `1` |
+| `--max-stops` | — | Maximum stops (0 = nonstop) | — |
+| `--currency` | — | Currency code | `USD` |
+| `--lang` | — | Language code | `en` |
+| `--timeout` | — | Request timeout (seconds) | `30` |
+| `--json` | — | Force JSON output | — |
+| `--open` | — | Open in browser | — |

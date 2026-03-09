@@ -1,0 +1,63 @@
+# Exit Codes
+
+Crosswind uses semantic exit codes so scripts and agents can handle errors without parsing output.
+
+## Exit code table
+
+| Code | Category | Description |
+|---|---|---|
+| `0` | Success | Flights found and returned |
+| `1` | General error | Unexpected HTTP status, internal error |
+| `2` | Validation | Bad airport code, invalid date, bad passenger count |
+| `3` | Network | Timeout, connection failed, DNS error, TLS error |
+| `4` | Rate limit / blocked | Google rate limit (429), bot detection (403/503) |
+| `5` | Parse error | Page structure changed, no results found |
+
+## Reason codes
+
+In JSON error envelopes, the `code` field provides a machine-readable reason:
+
+| Reason code | Exit code | Description |
+|---|---|---|
+| `invalid_airport_code` | 2 | Not a 3-letter IATA code |
+| `invalid_date` | 2 | Cannot parse date input |
+| `invalid_passengers` | 2 | Passenger count out of range |
+| `timeout` | 3 | Request timed out |
+| `connection_failed` | 3 | Could not connect |
+| `dns_resolution` | 3 | DNS lookup failed |
+| `tls_error` | 3 | TLS handshake failed |
+| `proxy_error` | 3 | Proxy connection failed |
+| `rate_limited` | 4 | HTTP 429 from Google |
+| `blocked` | 4 | HTTP 403/503, bot detection |
+| `script_tag_not_found` | 5 | Expected data not in page |
+| `parse_error` | 5 | Failed to extract flight data |
+| `no_results` | 5 | No flights for this search |
+| `http_status` | 1 | Unexpected HTTP status |
+| `other` | 1 | Catch-all |
+
+## Usage in scripts
+
+```bash
+crosswind BEG JFK apr1 --json > flights.json
+code=$?
+
+case $code in
+  0) echo "Success" ;;
+  2) echo "Bad input, check arguments" ;;
+  3) echo "Network issue, retry later" ;;
+  4) echo "Rate limited, wait and retry" ;;
+  5) echo "Parse error, Google may have changed" ;;
+  *) echo "Unknown error" ;;
+esac
+```
+
+## Hints
+
+Some errors include hints in both TTY and JSON modes:
+
+```
+error: airport code must be exactly 3 letters, got 'XX'
+hint: use a 3-letter IATA code like JFK, LAX, BEG
+```
+
+In JSON mode, hints appear as an optional `hint` field in the error envelope.
