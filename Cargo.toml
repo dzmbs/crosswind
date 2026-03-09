@@ -1,6 +1,6 @@
 [package]
 name = "crosswind"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 license = "MIT"
 description = "Google Flights CLI. Search flights from the terminal."
