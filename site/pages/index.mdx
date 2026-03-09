@@ -10,9 +10,9 @@ outline: false
 import { HomePage } from 'vocs/components'
 
 <HomePage.Root>
-  <picture>
+  <picture style={{ display: 'block', textAlign: 'center' }}>
     <source media="(prefers-color-scheme: dark)" srcSet="/crosswind-wordmark-dark.svg" />
-    <img src="/crosswind-wordmark-light.svg" alt="crosswind" style={{ height: '52px', margin: '0 auto 16px' }} />
+    <img src="/crosswind-wordmark-light.svg" alt="crosswind" style={{ height: '52px', display: 'inline-block' }} />
   </picture>
   <HomePage.Tagline>Google Flights from your terminal</HomePage.Tagline>
 
