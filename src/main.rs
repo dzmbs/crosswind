@@ -200,10 +200,22 @@ async fn run(cli: &Cli, format: OutputFormat, start: Instant) -> Result<(), Cros
     let mut all_flights = Vec::new();
     let mut all_airlines = Vec::new();
 
+    let multi = destinations.len() > 1;
     for dest in &destinations {
-        let result = crosswind::search(&params, dest, cli.timeout).await?;
-        all_flights.extend(result.flights);
-        all_airlines.extend(result.airlines);
+        match crosswind::search(&params, dest, cli.timeout).await {
+            Ok(result) => {
+                all_flights.extend(result.flights);
+                all_airlines.extend(result.airlines);
+            }
+            Err(CrosswindError::NoResults) if multi => {
+                eprintln!("{DIM}no flights for {dest}, skipping{RESET}");
+            }
+            Err(e) => return Err(e),
+        }
+    }
+
+    if all_flights.is_empty() {
+        return Err(CrosswindError::NoResults);
     }
 
     all_airlines.sort_by(|a, b| a.code.cmp(&b.code));
